@@ -50,6 +50,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Boolean mLocationPermissionsGranted = false;
     private ImageView mGps;
+    private ImageView mClearPins;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,18 +58,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
 
         mGps = (ImageView) findViewById(R.id.ic_gps);
+        mClearPins = (ImageView) findViewById(R.id.ic_clear);
         mPlaceAutoComplete = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete);
 
 
         getLocationPermission();
 
-//        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-//        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-//        mapFragment.getMapAsync(this);
     }
 
     private void geoLocate(String searchLocation) {
-        Log.e(TAG, "geoLocate: searchLocation: " + searchLocation );
 
         Geocoder geocoder = new Geocoder(MapsActivity.this);
         List<Address> list = new ArrayList<>();
@@ -82,17 +80,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(list.size() > 0){
             Address address = list.get(0);
 
-            Log.d(TAG, "geoLocate: found a location: " + address.toString());
-            //Toast.makeText(this, address.toString(), Toast.LENGTH_SHORT).show();
-            mMap.clear();
             moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), ADDRESS_ZOOM, address.getAddressLine(0));
-            Log.d(TAG, "111 " + address.getLatitude()+ " " + address.getLongitude() + " -- " + address.getAddressLine(0));
         }
     }
 
     private void moveCamera(LatLng latLng, float zoom, String title){
-        Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude );
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+//        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom), 4000, null);
 
         if(!title.equals("My Location")){
             MarkerOptions options = new MarkerOptions().position(latLng).title(title);
@@ -103,16 +97,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void init(){
-        Log.d(TAG, "init: initializing");
 
-        moveCamera(new LatLng(DEFAULT_LATITUDE, DEFAULT_LONGITUDE),
-                DEFAULT_ZOOM,
-                "My Location");
+        moveCamera(new LatLng(DEFAULT_LATITUDE, DEFAULT_LONGITUDE), DEFAULT_ZOOM, "My Location");
 
         mPlaceAutoComplete.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
-                Log.e(TAG, "before geoLocate: place: " + place.getAddress() );
                 geoLocate((String)place.getAddress());
             }
 
@@ -125,8 +115,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mGps.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d(TAG, "onClick: clicked gps icon");
                 getDeviceLocation();
+            }
+        });
+
+        mClearPins.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mMap.clear();
             }
         });
 
@@ -135,8 +131,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void getDeviceLocation(){
-        Log.d(TAG, "getDeviceLocation: getting the devices current location");
-
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         try{
@@ -147,17 +141,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     @Override
                     public void onComplete(@NonNull Task task) {
                         if(task.isSuccessful() && task.getResult() != null){
-                            Log.d(TAG, "onComplete: found location!");
                             Location currentLocation = (Location) task.getResult();
 
-                            moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()),
-                                    ADDRESS_ZOOM,
-                                    "My Location");
+                            moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), ADDRESS_ZOOM, "My Location");
 
                         }else{
-                            Log.d(TAG, "onComplete: current location is null");
                             Toast.makeText(MapsActivity.this, getString(R.string.location_not_found), Toast.LENGTH_SHORT).show();
-
                         }
                     }
                 });
@@ -197,31 +186,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void getLocationPermission(){
-        Log.d(TAG, "getLocationPermission: getting location permissions");
         String[] permissions = {android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION};
+                                android.Manifest.permission.ACCESS_COARSE_LOCATION};
 
-        if(ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            if(ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                    COURSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+        if(ContextCompat.checkSelfPermission(this.getApplicationContext(), FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+            if(ContextCompat.checkSelfPermission(this.getApplicationContext(), COURSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
                 mLocationPermissionsGranted = true;
                 initMap();
             }else{
-                ActivityCompat.requestPermissions(this,
-                        permissions,
-                        LOCATION_PERMISSION_REQUEST_CODE);
+                ActivityCompat.requestPermissions(this, permissions, LOCATION_PERMISSION_REQUEST_CODE);
             }
         }else{
-            ActivityCompat.requestPermissions(this,
-                    permissions,
-                    LOCATION_PERMISSION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(this, permissions, LOCATION_PERMISSION_REQUEST_CODE);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        Log.d(TAG, "onRequestPermissionsResult: called.");
         mLocationPermissionsGranted = false;
 
         switch(requestCode){
@@ -230,13 +211,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     for(int i = 0; i < grantResults.length; i++){
                         if(grantResults[i] != PackageManager.PERMISSION_GRANTED){
                             mLocationPermissionsGranted = false;
-                            Log.d(TAG, "onRequestPermissionsResult: permission failed");
                             return;
                         }
                     }
-                    Log.d(TAG, "onRequestPermissionsResult: permission granted");
+
                     mLocationPermissionsGranted = true;
-                    //initialize our map
+
                     initMap();
                 }
             }
@@ -244,10 +224,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void initMap(){
-        Log.d(TAG, "initMap: initializing map");
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
         mapFragment.getMapAsync(MapsActivity.this);
     }
-
 }
